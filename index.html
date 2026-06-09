@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Finance Tracker</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --bg-color: #0C0C0E; --surface: #16161A; --surface-card: #22222B; --primary: #1DE9B6; --income: #00E676; --expense: #FF5252; --fuel: #FF9800; --text-main: #FFFFFF; --text-muted: #8E8E93; --student: #29B6F6; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; min-height: 100vh; }
+        .phone-container { width: 100%; max-width: 480px; background-color: var(--bg-color); min-height: 100vh; position: relative; padding: 24px 16px 95px 16px; display: flex; flex-direction: column; overflow-x: hidden; }
+
+        .app-view { display: none; }
+        .app-view.active { display: flex; flex-direction: column; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+        
+        /* Upgraded Hero Balance Split Architecture */
+        .hero-card { background: linear-gradient(135deg, var(--surface) 0%, #1A1A24 100%); border-radius: 24px; padding: 22px; margin-bottom: 20px; border: 1px solid #2C2C35; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        .hero-card .main-total-row { border-bottom: 1px solid #2C2C35; padding-bottom: 14px; margin-bottom: 14px; text-align: center; }
+        .hero-card .label { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; }
+        .hero-card .balance { font-size: 34px; font-weight: 900; color: var(--primary); margin-top: 4px; }
+        .hero-split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .hero-split-box { padding: 4px 8px; }
+        .hero-split-box:first-child { border-right: 1px solid #2C2C35; }
+        .hero-split-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px; }
+        .hero-split-val { font-size: 18px; font-weight: 800; margin-top: 4px; color: var(--text-main); }
+
+        .section-title { font-size: 13px; color: var(--text-muted); margin: 15px 0 10px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+        .stat-card { background-color: var(--surface); border-radius: 18px; padding: 16px 12px; border: 1px solid #23232A; transition: transform 0.1s; cursor: pointer; }
+        .stat-card:active { transform: scale(0.95); border-color: var(--primary); }
+        .stat-card .title { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+        .stat-card .amount { font-size: 18px; font-weight: 800; margin-top: 6px; }
+        .stat-card.profit .amount { color: var(--income); }
+        .stat-card.expense .amount { color: var(--expense); }
+        .stat-card.fuel .amount { color: var(--fuel); }
+
+        .investment-dash-card { background-color: var(--surface); border-radius: 18px; padding: 16px; border: 1px solid #23232A; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-bottom: 16px; }
+        .investment-dash-card:active { transform: scale(0.98); border-color: var(--student); }
+        .investment-dash-card .details h4 { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .investment-dash-card .details p { font-size: 20px; font-weight: 800; color: var(--student); margin-top: 4px; }
+        .investment-dash-card .inv-growth { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 8px; background-color: rgba(0, 230, 118, 0.1); color: var(--income); }
+        .investment-dash-card .inv-growth.loss { background-color: rgba(255, 82, 82, 0.1); color: var(--expense); }
+
+        .tool-card { background-color: var(--surface); border-radius: 20px; padding: 16px; border: 1px solid #23232A; margin-bottom: 12px; }
+        .tool-card .tool-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .tool-card .tool-row:last-child { margin-bottom: 0; }
+        .tool-label { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+        .tool-value { font-size: 15px; font-weight: 800; }
+        .divider { height: 1px; background-color: #222; margin: 10px 0; }
+        
+        .use-btn { background-color: var(--fuel); color: #000; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; letter-spacing: 0.5px; }
+        .use-btn:active { transform: scale(0.95); }
+
+        .pill-box { display: flex; background: var(--surface); padding: 4px; border-radius: 14px; margin-bottom: 15px; border: 1px solid #23232A; gap: 4px; }
+        .pill { flex: 1; text-align: center; padding: 10px 2px; font-size: 11px; font-weight: 700; color: var(--text-muted); border-radius: 11px; cursor: pointer; border: none; background: none; transition: 0.2s; }
+        .pill.active { background-color: var(--surface-card); color: var(--primary); }
+
+        .chart-container-box { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+        .chart-box { background: var(--surface); border-radius: 20px; padding: 16px; border: 1px solid #23232A; display: flex; flex-direction: column; align-items: center; }
+        .chart-box h4 { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px; }
+        #analyticsChart, #portfolioChart { max-width: 230px; max-height: 230px; }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 76px; background-color: var(--surface); border-top: 1px solid #23232A; display: flex; align-items: center; justify-content: space-around; padding: 0 10px; z-index: 100; }
+        .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-size: 11px; font-weight: 500; width: 55px; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item .material-icons { font-size: 24px; }
+
+        .center-fab-box { position: relative; width: 50px; height: 50px; display: flex; justify-content: center; }
+        .master-fab { width: 52px; height: 52px; border-radius: 50%; background-color: var(--primary); color: #000; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 16px rgba(0,233,182,0.3); z-index: 105; transition: transform 0.2s; }
+        .master-fab.active { transform: rotate(135deg); background-color: var(--expense); color: #fff; }
+        .fab-options-menu { position: absolute; bottom: 75px; display: none; flex-direction: column; gap: 10px; align-items: center; z-index: 104; }
+        .fab-options-menu.show { display: flex; }
+        .fab-sub-btn { display: flex; align-items: center; gap: 8px; background-color: #1A1A24; padding: 10px 18px; border-radius: 20px; border: 1px solid #32323F; cursor: pointer; color: var(--text-main); font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+        .portfolio-list { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .portfolio-card { background-color: var(--surface); border: 1px solid #23232A; padding: 16px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .portfolio-info { flex-grow: 1; }
+        .portfolio-info h4 { font-size: 15px; font-weight: 700; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+        .freq-badge { background-color: rgba(41, 182, 246, 0.15); color: var(--student); font-size: 10px; font-weight: 900; padding: 2px 7px; border-radius: 6px; text-transform: uppercase; border: 1px solid rgba(41, 182, 246, 0.3); }
+        
+        .portfolio-info p.meta { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
+        .portfolio-data-row { display: flex; gap: 16px; font-size: 12px; }
+        .portfolio-data-row span { font-weight: bold; color: var(--text-main); }
+        .update-val-link { color: var(--student); font-size: 11px; cursor: pointer; text-decoration: underline; margin-top: 6px; display: inline-block; font-weight: 600; }
+        
+        .log-sip-btn { background-color: rgba(0, 230, 118, 0.15); color: var(--income); border: 1px solid rgba(0, 230, 118, 0.3); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; font-weight: bold; transition: 0.1s; }
+        .log-sip-btn:active { transform: scale(0.9); background-color: var(--income); color: #000; }
+        .delete-asset-btn { background: none; border: none; color: #333; cursor: pointer; margin-left: 10px; }
+        .delete-asset-btn:hover { color: var(--expense); }
+
+        .ledger-group-header { font-size: 12px; color: var(--primary); font-weight: 700; margin: 15px 0 8px 4px; display: flex; justify-content: space-between; }
+        .log-container-list { display: flex; flex-direction: column; gap: 8px; }
+        .ledger-row-item { background-color: var(--surface); padding: 16px; border-radius: 16px; border: 1px solid #23232A; display: flex; align-items: center; justify-content: space-between; }
+        .ledger-details { flex-grow: 1; margin-right: 12px; }
+        .ledger-details h4 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+        .ledger-details p { font-size: 11px; color: var(--text-muted); display: flex; gap: 6px; align-items: center; }
+        .ledger-badge { background: #2B2B36; padding: 2px 6px; border-radius: 6px; font-size: 9px; font-weight: bold; color: #DDD; }
+        .ledger-val { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        .ledger-val.inc { color: var(--income); }
+        .ledger-val.exp { color: var(--expense); }
+        .ledger-val.gas { color: var(--fuel); }
+        .row-del-btn { background: none; border: none; color: #444; cursor: pointer; display: flex; align-items: center; }
+        .row-del-btn:hover { color: var(--expense); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+        .modal-overlay.show { display: flex; }
+        .modal-body { background-color: var(--surface); width: 100%; max-width: 380px; border-radius: 28px; padding: 24px; border: 1px solid #2C2C35; }
+        .modal-body h3 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+        .input-box { margin-bottom: 14px; }
+        .input-box label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; font-weight: 600; }
+        .input-box input, .input-box select { width: 100%; background-color: var(--bg-color); border: 1px solid #2C2C35; padding: 14px; border-radius: 14px; color: #fff; font-size: 14px; outline: none; }
+        .input-box input:focus, .input-box select:focus { border-color: var(--primary); }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+        .action-btn { padding: 12px 24px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; font-size: 14px; }
+        .action-btn.cancel { background: none; color: var(--text-muted); }
+        .action-btn.confirm { background-color: var(--primary); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="phone-container">
+
+        <div id="viewDashboard" class="app-view active">
+            <div class="header">
+                <h2>Dashboard</h2>
+                <button class="row-del-btn" style="color: var(--text-muted)" onclick="openSettings()"><span class="material-icons">settings</span></button>
+            </div>
+
+            <div class="hero-card">
+                <div class="main-total-row">
+                    <div class="label">Total Net Balance</div>
+                    <div class="balance" id="domMainBalance">₹0.00</div>
+                </div>
+                <div class="hero-split-grid">
+                    <div class="hero-split-box">
+                        <div class="hero-split-label"><span class="material-icons" style="font-size:12px; color:var(--student);">account_balance</span> Bank (Online)</div>
+                        <div class="hero-split-val" id="domBankBalance">₹0</div>
+                    </div>
+                    <div class="hero-split-box">
+                        <div class="hero-split-label"><span class="material-icons" style="font-size:12px; color:var(--fuel);">payments</span> Cash Wallet</div>
+                        <div class="hero-split-val" id="domCashBalance">₹0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">Today's Stats (Tap to view)</div>
+            <div class="stats-grid">
+                <div class="stat-card profit" onclick="filterLedgerAndSwitch('PROFIT')">
+                    <div class="title">Income</div>
+                    <div class="amount" id="domTodayProfit">₹0</div>
+                </div>
+                <div class="stat-card expense" onclick="filterLedgerAndSwitch('EXPENSE')">
+                    <div class="title">Expenses</div>
+                    <div class="amount" id="domTodayExpense">₹0</div>
+                </div>
+                <div class="stat-card fuel" onclick="filterLedgerAndSwitch('FUEL')">
+                    <div class="title">Total Bike</div>
+                    <div class="amount" id="domTodayFuel">₹0</div>
+                </div>
+            </div>
+
+            <div class="investment-dash-card" onclick="switchAppView('viewInvestments', document.getElementById('navInvestmentsBtn'))">
+                <div class="details">
+                    <h4>Total Investments Value</h4>
+                    <p id="domDashTotalInvested">₹0</p>
+                </div>
+                <div class="inv-growth" id="domDashInvPerformance">+₹0 (0%)</div>
+            </div>
+
+            <div class="section-title">Earnings Breakdown (Last 7 Days)</div>
+            <div class="tool-card">
+                <div class="tool-row">
+                    <div class="tool-label"><span class="material-icons" style="color: var(--student); font-size: 18px;">schedule</span> Hourly Wage</div>
+                    <div class="tool-value" id="domHourlyWage" style="color: var(--primary)">₹0/hr</div>
+                </div>
+                <div class="divider"></div>
+                <div class="tool-row">
+                    <div class="tool-label"><span class="material-icons" style="color: var(--text-muted); font-size: 18px;">timer</span> Total Hours Worked</div>
+                    <div class="tool-value" id="domTotalHours">0 hrs</div>
+                </div>
+            </div>
+
+            <div class="section-title">Bike & Daily Budget</div>
+            <div class="tool-card">
+                <div class="tool-row">
+                    <div class="tool-label"><span class="material-icons" style="color: var(--expense); font-size: 18px;">local_gas_station</span> Today's Petrol Cost</div>
+                    <div class="tool-value" id="domPetrolRefill" style="color: var(--expense)">₹0</div>
+                </div>
+                <div class="divider"></div>
+                <div class="tool-row">
+                    <div class="tool-label"><span class="material-icons" style="color: var(--fuel); font-size: 18px;">build_circle</span> Bike Repair Fund</div>
+                    <div style="display:flex; align-items:center; gap: 10px;">
+                        <div class="tool-value" id="domMaintReserve" style="color: var(--fuel)">₹0</div>
+                        <button class="use-btn" onclick="triggerMaintenanceUse()">USE</button>
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="tool-row">
+                    <div class="tool-label"><span class="material-icons" style="color: var(--income); font-size: 18px;">account_balance</span> Safe Daily Budget</div>
+                    <div class="tool-value" id="domSafeSpend" style="color: var(--income)">₹0</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="viewAnalytics" class="app-view">
+            <div class="header"><h2>Analytics</h2></div>
+            <div class="pill-box">
+                <button class="pill active" onclick="switchAnalyticsTimeframe('WEEK', this)">Weekly</button>
+                <button class="pill" onclick="switchAnalyticsTimeframe('MONTH', this)">Monthly</button>
+                <button class="pill" onclick="switchAnalyticsTimeframe('YEAR', this)">Yearly</button>
+                <button class="pill" onclick="switchAnalyticsTimeframe('ALLTIME', this)">All-Time</button>
+            </div>
+            
+            <div class="chart-container-box">
+                <div class="chart-box">
+                    <h4>Cash Flow & Budget Allocation</h4>
+                    <canvas id="analyticsChart"></canvas>
+                </div>
+                <div class="chart-box" id="domPortfolioChartContainer" style="display: none;">
+                    <h4>Investment Portfolio Spread</h4>
+                    <canvas id="portfolioChart"></canvas>
+                </div>
+            </div>
+
+            <div class="section-title">Time Period Summary</div>
+            <div class="tool-card">
+                <div class="tool-row">
+                    <div class="tool-label">Total Income:</div>
+                    <div class="tool-value" id="domAnlyInc" style="color: var(--income)">₹0.00</div>
+                </div>
+                <div class="tool-row">
+                    <div class="tool-label">Total Expenses:</div>
+                    <div class="tool-value" id="domAnlyExp" style="color: var(--expense)">₹0.00</div>
+                </div>
+                <div class="tool-row">
+                    <div class="tool-label">Total Bike & Asset Costs:</div>
+                    <div class="tool-value" id="domAnlyFuel" style="color: var(--fuel)">₹0.00</div>
+                </div>
+                <div class="divider"></div>
+                <div class="tool-row">
+                    <div class="tool-label" style="font-weight: bold; color: var(--text-main)">Final Saved Money:</div>
+                    <div class="tool-value" id="domAnlyNet" style="color: var(--primary)">₹0.00</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="viewLedger" class="app-view">
+            <div class="header"><h2>History Logs</h2></div>
+            <div class="pill-box" style="margin-bottom: 5px;">
+                <button class="pill active" id="pill_ALL" onclick="setLedgerFilter('ALL')">All</button>
+                <button class="pill" id="pill_PROFIT" onclick="setLedgerFilter('PROFIT')">Income</button>
+                <button class="pill" id="pill_EXPENSE" onclick="setLedgerFilter('EXPENSE')">Exp</button>
+                <button class="pill" id="pill_FUEL" onclick="setLedgerFilter('FUEL')">Bike/Asset</button>
+            </div>
+            <div class="log-list" id="domLedgerListContainer" style="overflow-y: auto; flex-grow: 1; max-height: calc(100vh - 220px); padding-top: 10px;"></div>
+        </div>
+
+        <div id="viewInvestments" class="app-view">
+            <div class="header">
+                <h2>Investments</h2>
+                <button class="row-del-btn" style="color: var(--student)" onclick="toggleModal('newAssetModal', true)">
+                    <span class="material-icons" style="font-size: 28px;">add_circle</span>
+                </button>
+            </div>
+            
+            <div class="section-title">My Asset Portfolio</div>
+            <div class="portfolio-list" id="domPortfolioContainer"></div>
+        </div>
+
+        <div class="bottom-nav">
+            <button class="nav-item active" onclick="switchAppView('viewDashboard', this)"><span class="material-icons">dashboard</span>Home</button>
+            <button class="nav-item" id="navAnalyticsBtn" onclick="switchAppView('viewAnalytics', this)"><span class="material-icons">pie_chart</span>Charts</button>
+            <div class="center-fab-box">
+                <button class="master-fab" id="masterFabBtn" onclick="toggleFabSystemMenu()"><span class="material-icons">add</span></button>
+                <div class="fab-options-menu" id="fabOptionsMenuBlock">
+                    <button class="fab-sub-btn" onclick="triggerIncomeFormModal()"><span class="material-icons" style="color: var(--income)">account_balance_wallet</span> Add Income</button>
+                    <button class="fab-sub-btn" onclick="triggerExpenseFormModal()"><span class="material-icons" style="color: var(--expense)">payment</span> Add Expense</button>
+                    <button class="fab-sub-btn" onclick="triggerFuelModal()"><span class="material-icons" style="color: var(--fuel)">speed</span> End of Day Bike Log</button>
+                </div>
+            </div>
+            <button class="nav-item" id="navLedgerBtn" onclick="switchAppView('viewLedger', this)"><span class="material-icons">receipt_long</span>Logs</button>
+            <button class="nav-item" id="navInvestmentsBtn" onclick="switchAppView('viewInvestments', this)"><span class="material-icons">trending_up</span>Invest</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="incomeModal">
+        <div class="modal-body">
+            <h3>Add Income</h3>
+            <div class="input-box"><label>Amount Received (₹)</label><input type="number" id="incAmt" placeholder="0.00" required></div>
+            <div class="input-box"><label>Hours Worked (Optional)</label><input type="number" step="0.1" id="incHours" placeholder="e.g. 6.5"></div>
+            
+            <div class="input-box">
+                <label>Received Via</label>
+                <select id="incMode">
+                    <option value="Online">Online (Bank / UPI)</option>
+                    <option value="Cash">Physical Cash</option>
+                </select>
+            </div>
+
+            <div class="input-box">
+                <label>Category</label>
+                <select id="incTag">
+                    <option value="Work">Work</option>
+                    <option value="Pocket Money">Pocket Money</option>
+                    <option value="Other Income">Other</option>
+                </select>
+            </div>
+            <div class="input-box"><label>Notes</label><input type="text" id="incDesc" placeholder="e.g., Monday Shift"></div>
+            <div class="modal-buttons">
+                <button class="action-btn cancel" onclick="toggleModal('incomeModal', false)">Cancel</button>
+                <button class="action-btn confirm" onclick="commitIncomeEntry()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="expenseModal">
+        <div class="modal-body">
+            <h3>Add Expense</h3>
+            <div class="input-box"><label>Amount Spent (₹)</label><input type="number" id="expAmt" placeholder="0.00" required></div>
+            
+            <div class="input-box">
+                <label>Paid Via</label>
+                <select id="expMode">
+                    <option value="Online">Online (Bank / UPI / Slice)</option>
+                    <option value="Cash">Physical Cash</option>
+                </select>
+            </div>
+
+            <div class="input-box">
+                <label>Category</label>
+                <select id="expTag">
+                    <option value="Food & Snacks">Food & Snacks</option>
+                    <option value="Petrol / Fuel">Petrol / Fuel</option>
+                    <option value="Bike Repair">Bike Repair / Service</option>
+                    <option value="College Fees">College Fees</option>
+                    <option value="Living Expenses">Living Expenses</option>
+                    <option value="Subscriptions">Subscriptions</option>
+                    <option value="Gaming">Game Spends</option>
+                    <option value="Gadgets & Tools">Gadgets & Tools</option>
+                    <option value="Misc">Miscellaneous</option>
+                </select>
+            </div>
+            <div class="input-box"><label>Notes</label><input type="text" id="expDesc" placeholder="e.g., Tea and snacks"></div>
+            <div class="modal-buttons">
+                <button class="action-btn cancel" onclick="toggleModal('expenseModal', false)">Cancel</button>
+                <button class="action-btn confirm" onclick="commitExpenseEntry()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="quickFuelModal">
+        <div class="modal-body">
+            <h3>End of Day Bike Log</h3>
+            <div class="input-box"><label>End of Day Odometer Reading</label><input type="number" step="0.1" id="fuelEndOdo" placeholder="e.g. 3180.5" required></div>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">
+                * The app will automatically calculate the distance and track your daily cost at <strong>₹2.15 per km</strong>.
+            </p>
+            <div class="modal-buttons">
+                <button class="action-btn cancel" onclick="toggleModal('quickFuelModal', false)">Cancel</button>
+                <button class="action-btn confirm" onclick="commitFuelMileageEntry()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="newAssetModal">
+        <div class="modal-body">
+            <h3>Setup Asset Tracker</h3>
+            <div class="input-box"><label>Investment Name</label><input type="text" id="assetName" placeholder="e.g. Tata Motors, Groww Nifty 50" required></div>
+            <div class="input-box">
+                <label>Asset Class Type & Frequency</label>
+                <select id="assetType">
+                    <option value="Daily SIP">Mutual Fund (Daily SIP)</option>
+                    <option value="Weekly SIP">Mutual Fund (Weekly SIP)</option>
+                    <option value="Monthly SIP">Mutual Fund (Monthly SIP)</option>
+                    <option value="Lumpsum MF">Mutual Fund (Lumpsum)</option>
+                    <option value="Direct Stock">Direct Stock / Equities</option>
+                    <option value="Gold / SGB">Sovereign Gold Bond (SGB)</option>
+                    <option value="Longterm PPF">Public Provident Fund (PPF)</option>
+                </select>
+            </div>
+            <div class="input-box"><label>Installment / Base Buy Price (₹)</label><input type="number" id="assetBaseAmt" placeholder="e.g. 20" required></div>
+            <div class="modal-buttons">
+                <button class="action-btn cancel" onclick="toggleModal('newAssetModal', false)">Cancel</button>
+                <button class="action-btn confirm" onclick="createNewInvestmentAsset()">Create Asset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="updateValuationModal">
+        <div class="modal-body">
+            <h3>Update Market Value</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;" id="updateValuationSubhead"></p>
+            <input type="hidden" id="updateTargetAssetId">
+            <div class="input-box"><label>Actual App Current Value (₹)</label><input type="number" id="newMarketValInput" placeholder="0.00" required></div>
+            <div class="modal-buttons">
+                <button class="action-btn cancel" onclick="toggleModal('updateValuationModal', false)">Cancel</button>
+                <button class="action-btn confirm" onclick="commitMarketValuationUpdate()">Update Valuation</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-body">
+            <h3>Admin Settings</h3>
+            
+            <div class="input-box" style="margin-top: 10px;">
+                <label>Current Bike Odometer (km)</label>
+                <input type="number" step="0.1" id="adminOdoSetting" placeholder="e.g. 3123">
+            </div>
+            <button class="action-btn confirm" style="width: 100%; margin-bottom: 20px;" onclick="updateAdminOdo()">Save Odometer</button>
+            
+            <input type="file" id="importDatabaseCSVInput" accept=".csv" style="display: none;" onchange="handleCSVFileImportSelection(event)">
+
+            <div style="display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #2C2C35; padding-top: 20px;">
+                <button class="action-btn" style="background-color: #2E2E3A; color: #FFF; text-align: left;" onclick="executeDataCSVParsing()">Download All Data (CSV)</button>
+                <button class="action-btn" style="background-color: rgba(41,182,246,0.1); color: var(--student); text-align: left;" onclick="document.getElementById('importDatabaseCSVInput').click()">Restore from Backup (CSV)</button>
+                <button class="action-btn" style="background-color: rgba(255,82,82,0.1); color: var(--expense); text-align: left;" onclick="purgeSystemDataMemory()">Delete All Data</button>
+            </div>
+            <div class="modal-buttons"><button class="action-btn cancel" onclick="toggleModal('settingsModal', false)">Close</button></div>
+        </div>
+    </div>
+
+    <script>
+        let ledgerDatabase = JSON.parse(localStorage.getItem('apex_ledger_store')) || [];
+        let portfolioAssets = JSON.parse(localStorage.getItem('apex_portfolio_store')) || [];
+        
+        let analyticsChartInstance = null;
+        let portfolioChartInstance = null;
+        let currentAnalyticsScope = 'WEEK';
+        let currentLedgerFilter = 'ALL';
+
+        const BASE_INITIAL_ODO = 3123;
+
+        const shortBadgeMap = {
+            "Daily SIP": "D", "Weekly SIP": "W", "Monthly SIP": "M",
+            "Lumpsum MF": "L", "Direct Stock": "Stock", "Gold / SGB": "Gold", "Longterm PPF": "PPF"
+        };
+
+        function switchAppView(viewId, eventSource) {
+            document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            if(eventSource) eventSource.classList.add('active');
+
+            if (viewId === 'viewAnalytics') renderAnalyticsEngineGraph();
+            if (viewId === 'viewLedger') recompileLedgerViewList();
+            if (viewId === 'viewInvestments') renderInvestmentPortfolioPage();
+        }
+
+        function filterLedgerAndSwitch(type) {
+            setLedgerFilter(type);
+            switchAppView('viewLedger', document.getElementById('navLedgerBtn'));
+        }
+
+        function setLedgerFilter(type) {
+            currentLedgerFilter = type;
+            document.querySelectorAll('#viewLedger .pill').forEach(p => p.classList.remove('active'));
+            document.getElementById('pill_' + type).classList.add('active');
+            recompileLedgerViewList();
+        }
+
+        function toggleFabSystemMenu() {
+            document.getElementById('fabOptionsMenuBlock').classList.toggle('show');
+            document.getElementById('masterFabBtn').classList.toggle('active');
+        }
+
+        function toggleModal(modalId, makeVisible) { document.getElementById(modalId).classList.toggle('show', makeVisible); }
+        function triggerIncomeFormModal() { toggleFabSystemMenu(); toggleModal('incomeModal', true); }
+        function triggerExpenseFormModal() { toggleFabSystemMenu(); toggleModal('expenseModal', true); }
+        
+        function triggerFuelModal() {
+            toggleFabSystemMenu();
+            document.getElementById('fuelEndOdo').value = '';
+            toggleModal('quickFuelModal', true);
+        }
+
+        function openSettings() {
+            let currentOdo = parseFloat(localStorage.getItem('apex_odo_last')) || BASE_INITIAL_ODO;
+            document.getElementById('adminOdoSetting').value = currentOdo;
+            toggleModal('settingsModal', true);
+        }
+
+        function updateAdminOdo() {
+            let newOdo = parseFloat(document.getElementById('adminOdoSetting').value);
+            if(isNaN(newOdo)) return alert("Please enter a valid number.");
+            localStorage.setItem('apex_odo_last', newOdo);
+            alert("Odometer updated!");
+        }
+
+        function triggerMaintenanceUse() {
+            toggleModal('expenseModal', true);
+            document.getElementById('expTag').value = 'Bike Repair';
+            document.getElementById('expDesc').value = 'Spent from Repair Fund';
+        }
+
+        function generateTimestampMetadata() {
+            const dateObj = new Date();
+            return {
+                rawDateString: `${String(dateObj.getDate()).padStart(2, '0')}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${dateObj.getFullYear()}`,
+                epochTime: Date.now()
+            };
+        }
+
+        function createNewInvestmentAsset() {
+            const name = document.getElementById('assetName').value.trim();
+            const type = document.getElementById('assetType').value;
+            const baseAmt = parseFloat(document.getElementById('assetBaseAmt').value);
+
+            if(!name || isNaN(baseAmt) || baseAmt <= 0) return alert("Please input complete asset metrics.");
+
+            const newAsset = {
+                id: 'ASSET_' + Date.now(),
+                name: name,
+                type: type,
+                baseAmount: baseAmt,
+                investedCost: 0,
+                currentValue: 0
+            };
+
+            portfolioAssets.push(newAsset);
+            syncPortfolioDatabase();
+            toggleModal('newAssetModal', false);
+            document.getElementById('assetName').value = '';
+            document.getElementById('assetBaseAmt').value = '';
+            renderInvestmentPortfolioPage();
+        }
+
+        function triggerLogContribution(assetId) {
+            const asset = portfolioAssets.find(a => a.id === assetId);
+            if(!asset) return;
+
+            const timeMeta = generateTimestampMetadata();
+            
+            ledgerDatabase.push({
+                id: 'TXN_' + timeMeta.epochTime,
+                type: 'INVESTMENT', 
+                amount: asset.baseAmount,
+                tag: 'Asset Fund Flow',
+                mode: 'Online', 
+                description: `Bought ${asset.name}`,
+                date: timeMeta.rawDateString,
+                timestamp: timeMeta.epochTime,
+                parentAssetId: assetId
+            });
+
+            asset.investedCost += asset.baseAmount;
+            if(asset.currentValue === 0 || asset.investedCost === asset.baseAmount) {
+                asset.currentValue = asset.investedCost;
+            }
+
+            syncPortfolioDatabase();
+            localStorage.setItem('apex_ledger_store', JSON.stringify(ledgerDatabase));
+            executeCoreFinancialMath();
+            renderInvestmentPortfolioPage();
+        }
+
+        function openValuationPrompt(assetId) {
+            const asset = portfolioAssets.find(a => a.id === assetId);
+            if(!asset) return;
+
+            document.getElementById('updateTargetAssetId').value = assetId;
+            document.getElementById('updateValuationSubhead').innerText = `${asset.name} (Total Cost Stack: ₹${asset.investedCost})`;
+            document.getElementById('newMarketValInput').value = asset.currentValue || asset.investedCost;
+            toggleModal('updateValuationModal', true);
+        }
+
+        function commitMarketValuationUpdate() {
+            const assetId = document.getElementById('updateTargetAssetId').value;
+            const newValue = parseFloat(document.getElementById('newMarketValInput').value);
+
+            if(isNaN(newValue) || newValue < 0) return alert("Please type a valid value.");
+
+            const asset = portfolioAssets.find(a => a.id === assetId);
+            if(asset) {
+                asset.currentValue = newValue;
+                syncPortfolioDatabase();
+                executeCoreFinancialMath();
+                renderInvestmentPortfolioPage();
+                toggleModal('updateValuationModal', false);
+            }
+        }
+
+        function deleteAssetNode(assetId) {
+            if(confirm("Remove this asset tracker completely from the list?")) {
+                portfolioAssets = portfolioAssets.filter(a => a.id !== assetId);
+                syncPortfolioDatabase();
+                executeCoreFinancialMath();
+                renderInvestmentPortfolioPage();
+            }
+        }
+
+        function syncPortfolioDatabase() {
+            localStorage.setItem('apex_portfolio_store', JSON.stringify(portfolioAssets));
+        }
+
+        function renderInvestmentPortfolioPage() {
+            const container = document.getElementById('domPortfolioContainer');
+            container.innerHTML = '';
+
+            if(portfolioAssets.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding-top:40px; font-size:13px;">No active portfolio elements built yet.</p>`;
+                return;
+            }
+
+            portfolioAssets.forEach(asset => {
+                const growthAmt = asset.currentValue - asset.investedCost;
+                const growthPct = asset.investedCost > 0 ? ((growthAmt / asset.investedCost) * 100).toFixed(1) : '0.0';
+                const dynamicColor = growthAmt >= 0 ? 'var(--income)' : 'var(--expense)';
+                const displayPrefix = growthAmt >= 0 ? '+' : '';
+                const shortBadgeText = shortBadgeMap[asset.type] || 'Asset';
+
+                container.innerHTML += `
+                    <div class="portfolio-card">
+                        <div class="portfolio-info">
+                            <h4>${asset.name} <span class="freq-badge">${shortBadgeText}</span></h4>
+                            <p class="meta">Order Size: ₹${asset.baseAmount}</p>
+                            <div class="portfolio-data-row">
+                                <div>Cost Basis: <span>₹${Math.round(asset.investedCost)}</span></div>
+                                <div>Market Value: <span style="color:${dynamicColor}">₹${Math.round(asset.currentValue)}</span></div>
+                            </div>
+                            <div class="portfolio-data-row" style="margin-top:4px; font-size:11px; color:var(--text-muted)">
+                                <div>Profit/Loss: <span style="color:${dynamicColor}">${displayPrefix}₹${Math.round(growthAmt)} (${growthPct}%)</span></div>
+                            </div>
+                            <span class="update-val-link" onclick="openValuationPrompt('${asset.id}')">Update Market Value</span>
+                        </div>
+                        <div style="display:flex; align-items:center;">
+                            <button class="log-sip-btn" onclick="triggerLogContribution('${asset.id}')" title="Log Buy Action">+</button>
+                            <button class="delete-asset-btn" onclick="deleteAssetNode('${asset.id}')">
+                                <span class="material-icons" style="font-size:18px;">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function commitIncomeEntry() {
+            const amt = parseFloat(document.getElementById('incAmt').value);
+            const hrs = parseFloat(document.getElementById('incHours').value) || 0;
+            const mode = document.getElementById('incMode').value;
+            const tag = document.getElementById('incTag').value;
+            const desc = document.getElementById('incDesc').value.trim();
+            if (!amt || amt <= 0) return alert('Please enter a valid amount.');
+
+            const timeMeta = generateTimestampMetadata();
+            ledgerDatabase.push({
+                id: 'TXN_' + timeMeta.epochTime, type: 'PROFIT', amount: amt, tag: tag, hours: hrs, mode: mode,
+                description: desc ? desc : `Income [${tag}]`, date: timeMeta.rawDateString, timestamp: timeMeta.epochTime
+            });
+            syncSystemDatabase();
+            toggleModal('incomeModal', false);
+            document.getElementById('incAmt').value = ''; document.getElementById('incHours').value = ''; document.getElementById('incDesc').value = '';
+        }
+
+        function commitExpenseEntry() {
+            const amt = parseFloat(document.getElementById('expAmt').value);
+            const mode = document.getElementById('expMode').value;
+            const tag = document.getElementById('expTag').value;
+            const desc = document.getElementById('expDesc').value.trim();
+            if (!amt || amt <= 0) return alert('Please enter a valid amount.');
+
+            const timeMeta = generateTimestampMetadata();
+            ledgerDatabase.push({
+                id: 'TXN_' + timeMeta.epochTime, type: 'EXPENSE', amount: amt, tag: tag, mode: mode,
+                description: desc ? desc : `Expense [${tag}]`, date: timeMeta.rawDateString, timestamp: timeMeta.epochTime
+            });
+            syncSystemDatabase();
+            toggleModal('expenseModal', false);
+            document.getElementById('expAmt').value = ''; document.getElementById('expDesc').value = '';
+        }
+
+        function commitFuelMileageEntry() {
+            const startOdo = parseFloat(localStorage.getItem('apex_odo_last')) || BASE_INITIAL_ODO;
+            const endOdo = parseFloat(document.getElementById('fuelEndOdo').value);
+
+            if (isNaN(endOdo) || endOdo <= startOdo) return alert('The end reading must be higher than your start reading.');
+
+            const distance = endOdo - startOdo;
+            const timeMeta = generateTimestampMetadata();
+            const computedCost = distance * 2.15;
+            
+            ledgerDatabase.push({
+                id: 'TXN_' + timeMeta.epochTime, type: 'FUEL', amount: computedCost, tag: 'Bike Run', mode: 'Online', 
+                description: `Odo: ${startOdo} to ${endOdo} (${distance.toFixed(1)} km)`, date: timeMeta.rawDateString, timestamp: timeMeta.epochTime, kilometers: distance
+            });
+            
+            localStorage.setItem('apex_odo_last', endOdo);
+            syncSystemDatabase();
+            toggleModal('quickFuelModal', false);
+        }
+
+        function executeItemDeletion(targetId) {
+            if(confirm('Delete this record?')) {
+                const targetTxn = ledgerDatabase.find(x => x.id === targetId);
+                if(targetTxn && targetTxn.type === 'INVESTMENT' && targetTxn.parentAssetId) {
+                    const asset = portfolioAssets.find(a => a.id === targetTxn.parentAssetId);
+                    if(asset) {
+                        asset.investedCost = Math.max(0, asset.investedCost - targetTxn.amount);
+                        asset.currentValue = Math.max(0, asset.currentValue - targetTxn.amount);
+                        syncPortfolioDatabase();
+                    }
+                }
+                ledgerDatabase = ledgerDatabase.filter(item => item.id !== targetId);
+                syncSystemDatabase();
+                recompileLedgerViewList();
+            }
+        }
+
+        function syncSystemDatabase() {
+            localStorage.setItem('apex_ledger_store', JSON.stringify(ledgerDatabase));
+            executeCoreFinancialMath();
+        }
+
+        function executeCoreFinancialMath() {
+            const timeMeta = generateTimestampMetadata();
+            const currentEpoch = Date.now();
+            const bound7Days = currentEpoch - (7 * 24 * 60 * 60 * 1000);
+            const bound30Days = currentEpoch - (30 * 24 * 60 * 60 * 1000);
+
+            let bankLiquidityOnlinePool = 0;
+            let cashWalletInHandPool = 0;
+
+            let todayProfit = 0, todayExpense = 0, todayFuel = 0, todayPetrolBurn = 0;
+            let maintenanceSpentAmount = 0, cumulativeOdoDistance = 0;
+            
+            let last7dIncome = 0, last7dFuel = 0, last7dHours = 0;
+            let last30dIncome = 0, last30dExpense = 0, last30dFuel = 0;
+
+            ledgerDatabase.forEach(row => {
+                const routeMode = row.mode || 'Online'; 
+
+                if(row.type === 'PROFIT') {
+                    if(routeMode === 'Online') bankLiquidityOnlinePool += row.amount;
+                    else cashWalletInHandPool += row.amount;
+                }
+                if(row.type === 'EXPENSE') {
+                    if(routeMode === 'Online') bankLiquidityOnlinePool -= row.amount;
+                    else cashWalletInHandPool -= row.amount;
+
+                    if(row.tag === 'Bike Repair') maintenanceSpentAmount += row.amount;
+                }
+                if(row.type === 'FUEL') {
+                    bankLiquidityOnlinePool -= row.amount; 
+                    if(row.kilometers) cumulativeOdoDistance += row.kilometers;
+                }
+                if(row.type === 'INVESTMENT') {
+                    bankLiquidityOnlinePool -= row.amount; 
+                }
+
+                if(row.date === timeMeta.rawDateString) {
+                    if(row.type === 'PROFIT') todayProfit += row.amount;
+                    if(row.type === 'EXPENSE') todayExpense += row.amount;
+                    if(row.type === 'FUEL') {
+                        todayFuel += row.amount;
+                        if(row.kilometers) todayPetrolBurn += (row.kilometers * 1.71);
+                    }
+                }
+
+                if(row.timestamp >= bound7Days) {
+                    if(row.type === 'PROFIT') { last7dIncome += row.amount; if(row.hours) last7dHours += row.hours; }
+                    if(row.type === 'FUEL') last7dFuel += row.amount;
+                    if(row.type === 'INVESTMENT') last7dFuel += row.amount;
+                }
+
+                if(row.timestamp >= bound30Days) {
+                    if(row.type === 'PROFIT') last30dIncome += row.amount;
+                    if(row.type === 'EXPENSE') last30dExpense += row.amount;
+                    if(row.type === 'FUEL') last30dFuel += row.amount;
+                    if(row.type === 'INVESTMENT') last30dFuel += row.amount;
+                }
+            });
+
+            const overallCombinedCashWorth = bankLiquidityOnlinePool + cashWalletInHandPool;
+
+            let overallPortfolioCurrentMarketValue = 0, overallPortfolioInvestedCost = 0;
+            portfolioAssets.forEach(a => {
+                overallPortfolioInvestedCost += a.investedCost;
+                overallPortfolioCurrentMarketValue += a.currentValue;
+            });
+
+            const overallGrowthAmt = overallPortfolioCurrentMarketValue - overallPortfolioInvestedCost;
+            const overallGrowthPct = overallPortfolioInvestedCost > 0 ? ((overallGrowthAmt / overallPortfolioInvestedCost) * 100).toFixed(1) : '0.0';
+
+            document.getElementById('domMainBalance').innerText = `₹${overallCombinedCashWorth.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('domBankBalance').innerText = `₹${Math.round(bankLiquidityOnlinePool).toLocaleString('en-IN')}`;
+            document.getElementById('domCashBalance').innerText = `₹${Math.round(cashWalletInHandPool).toLocaleString('en-IN')}`;
+            
+            document.getElementById('domTodayProfit').innerText = `₹${Math.round(todayProfit)}`;
+            document.getElementById('domTodayExpense').innerText = `₹${Math.round(todayExpense)}`;
+            document.getElementById('domTodayFuel').innerText = `₹${Math.round(todayFuel)}`;
+            document.getElementById('domPetrolRefill').innerText = `₹${Math.round(todayPetrolBurn)}`;
+
+            document.getElementById('domDashTotalInvested').innerText = `₹${Math.round(overallPortfolioCurrentMarketValue).toLocaleString('en-IN')}`;
+            const perfBadge = document.getElementById('domDashInvPerformance');
+            perfBadge.innerText = `${overallGrowthAmt >= 0 ? '+' : ''}₹${Math.round(overallGrowthAmt)} (${overallGrowthPct}%)`;
+            if(overallGrowthAmt >= 0) perfBadge.classList.remove('loss'); else perfBadge.classList.add('loss');
+
+            document.getElementById('domTotalHours').innerText = `${last7dHours.toFixed(1)} hrs`;
+            if (last7dHours > 0) {
+                const hourlyWage = (last7dIncome - last7dFuel) / last7dHours;
+                document.getElementById('domHourlyWage').innerText = `₹${Math.max(0, Math.round(hourlyWage))}/hr`;
+            } else {
+                document.getElementById('domHourlyWage').innerText = `₹0/hr`;
+            }
+
+            const maintenanceReserve = (cumulativeOdoDistance * 0.44) - maintenanceSpentAmount;
+            document.getElementById('domMaintReserve').innerText = `₹${Math.round(maintenanceReserve).toLocaleString('en-IN')}`;
+
+            const last30dNet = last30dIncome - last30dExpense - last30dFuel;
+            const safeSpendLimit = last30dNet > 0 ? (last30dNet / 30) * 0.5 : 0;
+            document.getElementById('domSafeSpend').innerText = `₹${Math.round(safeSpendLimit)} / day`;
+        }
+
+        function recompileLedgerViewList() {
+            const container = document.getElementById('domLedgerListContainer');
+            container.innerHTML = '';
+            
+            let filteredDB = ledgerDatabase;
+            if(currentLedgerFilter !== 'ALL') {
+                if(currentLedgerFilter === 'FUEL') {
+                    filteredDB = ledgerDatabase.filter(x => x.type === 'FUEL' || x.type === 'INVESTMENT');
+                } else {
+                    filteredDB = ledgerDatabase.filter(x => x.type === currentLedgerFilter);
+                }
+            }
+
+            if(filteredDB.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding-top:40px; font-size:13px;">No logs found for this filter.</p>`;
+                return;
+            }
+
+            let chronologicalMap = {};
+            [...filteredDB].reverse().forEach(entry => {
+                if(!chronologicalMap[entry.date]) chronologicalMap[entry.date] = [];
+                chronologicalMap[entry.date].push(entry);
+            });
+
+            for (const [dateGroup, elements] of Object.entries(chronologicalMap)) {
+                let groupMarkupHeader = `<div class="ledger-group-header"><span>${dateGroup}</span></div>`;
+                let innerRowsMarkup = `<div class="log-container-list">`;
+
+                elements.forEach(el => {
+                    let styleClass = 'inc'; let mathematicalPrefix = '+';
+                    let txnRouteIndicator = el.mode ? ` • ${el.mode}` : ' • Online';
+                    let displayTag = el.type === 'INVESTMENT' ? 'Asset Allocation' : (el.tag + txnRouteIndicator);
+                    
+                    if (el.type === 'EXPENSE') { styleClass = 'exp'; mathematicalPrefix = '-'; }
+                    if (el.type === 'FUEL') { styleClass = 'gas'; mathematicalPrefix = '-'; }
+                    if (el.type === 'INVESTMENT') { styleClass = 'gas'; mathematicalPrefix = '-'; }
+
+                    innerRowsMarkup += `
+                        <div class="ledger-row-item">
+                            <div class="ledger-details">
+                                <h4>${el.description}</h4>
+                                <p><span class="ledger-badge">${displayTag}</span></p>
+                            </div>
+                            <div class="ledger-val ${styleClass}">${mathematicalPrefix}₹${Math.round(el.amount)}</div>
+                            <button class="row-del-btn" onclick="executeItemDeletion('${el.id}')">
+                                <span class="material-icons" style="font-size: 18px;">delete</span>
+                            </button>
+                        </div>
+                    `;
+                });
+                innerRowsMarkup += `</div>`;
+                container.innerHTML += groupMarkupHeader + innerRowsMarkup;
+            }
+        }
+
+        function switchAnalyticsTimeframe(scopeCode, btnCtx) {
+            document.querySelectorAll('#viewAnalytics .pill').forEach(p => p.classList.remove('active'));
+            btnCtx.classList.add('active');
+            currentAnalyticsScope = scopeCode;
+            renderAnalyticsEngineGraph();
+        }
+
+        function renderAnalyticsEngineGraph() {
+            const currentEpoch = Date.now();
+            let parsedBoundThreshold = 0;
+
+            if(currentAnalyticsScope === 'WEEK') parsedBoundThreshold = currentEpoch - (7 * 24 * 60 * 60 * 1000);
+            else if(currentAnalyticsScope === 'MONTH') parsedBoundThreshold = currentEpoch - (30 * 24 * 60 * 60 * 1000);
+            else if(currentAnalyticsScope === 'YEAR') parsedBoundThreshold = currentEpoch - (365 * 24 * 60 * 60 * 1000);
+            else if(currentAnalyticsScope === 'ALLTIME') parsedBoundThreshold = 0;
+
+            let segmentedDataset = ledgerDatabase.filter(x => x.timestamp >= parsedBoundThreshold);
+            let totalPeriodIncome = 0, totalPeriodExpense = 0, totalPeriodFuel = 0;
+            
+            let allocationMap = { "Work": 0, "Pocket Money": 0, "Other Income": 0, "Food & Snacks": 0, "Bike Repair": 0, "College Fees": 0, "Living Expenses": 0, "Subscriptions": 0, "Gaming": 0, "Gadgets & Tools": 0, "Bike Run": 0, "Asset Fund Flow": 0, "Misc": 0 };
+            let assetSpecificPieMap = {};
+
+            segmentedDataset.forEach(obj => {
+                if(obj.type === 'PROFIT') { 
+                    totalPeriodIncome += obj.amount; 
+                    if(allocationMap[obj.tag] !== undefined) allocationMap[obj.tag] += obj.amount;
+                    else allocationMap["Work"] += obj.amount;
+                }
+                if(obj.type === 'FUEL') { 
+                    totalPeriodFuel += obj.amount; 
+                    allocationMap["Bike Run"] += obj.amount; 
+                }
+                if(obj.type === 'INVESTMENT') { 
+                    totalPeriodFuel += obj.amount; 
+                    allocationMap["Asset Fund Flow"] += obj.amount; 
+                    
+                    if(obj.parentAssetId) {
+                        const matchedAsset = portfolioAssets.find(a => a.id === obj.parentAssetId);
+                        if(matchedAsset) {
+                            if(!assetSpecificPieMap[matchedAsset.name]) assetSpecificPieMap[matchedAsset.name] = 0;
+                            assetSpecificPieMap[matchedAsset.name] += obj.amount;
+                        } else {
+                            if(!assetSpecificPieMap["Deleted / Other Asset"]) assetSpecificPieMap["Deleted / Other Asset"] = 0;
+                            assetSpecificPieMap["Deleted / Other Asset"] += obj.amount;
+                        }
+                    }
+                }
+                if(obj.type === 'EXPENSE') {
+                    totalPeriodExpense += obj.amount;
+                    if(allocationMap[obj.tag] !== undefined) allocationMap[obj.tag] += obj.amount;
+                    else allocationMap["Misc"] += obj.amount;
+                }
+            });
+
+            document.getElementById('domAnlyInc').innerText = `₹${totalPeriodIncome.toFixed(2)}`;
+            document.getElementById('domAnlyExp').innerText = `₹${totalPeriodExpense.toFixed(2)}`;
+            document.getElementById('domAnlyFuel').innerText = `₹${totalPeriodFuel.toFixed(2)}`;
+            document.getElementById('domAnlyNet').innerText = `₹${(totalPeriodIncome - totalPeriodExpense - totalPeriodFuel).toFixed(2)}`;
+
+            let chart1Labels = [], chart1Data = [];
+            for(const [key, val] of Object.entries(allocationMap)) {
+                if(val > 0) { chart1Labels.push(key); chart1Data.push(Math.round(val)); }
+            }
+
+            if(analyticsChartInstance) analyticsChartInstance.destroy();
+            const ctx1 = document.getElementById('analyticsChart').getContext('2d');
+            if(chart1Data.length === 0) { chart1Labels = ["No Data"]; chart1Data = [1]; }
+
+            analyticsChartInstance = new Chart(ctx1, {
+                type: 'pie',
+                data: {
+                    labels: chart1Labels,
+                    datasets: [{
+                        data: chart1Data,
+                        backgroundColor: ['#00E676', '#FF5252', '#FF9800', '#29B6F6', '#E040FB', '#FFFF00', '#00E5FF', '#9E9E9E', '#7C4DFF', '#FF6E40', '#4CAF50', '#607D8B'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+
+            let chart2Labels = [], chart2Data = [];
+            for(const [key, val] of Object.entries(assetSpecificPieMap)) {
+                if(val > 0) { chart2Labels.push(key); chart2Data.push(Math.round(val)); }
+            }
+
+            const portfolioBox = document.getElementById('domPortfolioChartContainer');
+            if(portfolioChartInstance) portfolioChartInstance.destroy();
+
+            if(chart2Data.length > 0) {
+                portfolioBox.style.display = 'flex';
+                const ctx2 = document.getElementById('portfolioChart').getContext('2d');
+                portfolioChartInstance = new Chart(ctx2, {
+                    type: 'pie',
+                    data: {
+                        labels: chart2Labels,
+                        datasets: [{
+                            data: chart2Data,
+                            backgroundColor: ['#00E5FF', '#29B6F6', '#7C4DFF', '#FF9800', '#E040FB', '#FFFF00', '#00E676'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { responsive: true, plugins: { legend: { display: false } } }
+                });
+            } else {
+                portfolioBox.style.display = 'none';
+            }
+        }
+
+        function executeDataCSVParsing() {
+            if(ledgerDatabase.length === 0 && portfolioAssets.length === 0) return alert('No data to backup.');
+            let csvContent = "data:text/csv;charset=utf-8,DATA_TYPE,ID,FIELD_A,FIELD_B,FIELD_C,FIELD_D,FIELD_E,FIELD_F,FIELD_G,FIELD_H,FIELD_I\n";
+            
+            ledgerDatabase.forEach(o => {
+                csvContent += `LEDGER,${o.id},${o.type},${o.amount},${o.tag},${o.hours || 0},"${o.description}",${o.date},${o.timestamp},${o.kilometers || 0},${o.parentAssetId || ''},${o.mode || 'Online'}\n`;
+            });
+            portfolioAssets.forEach(a => {
+                csvContent += `ASSET,${a.id},"${a.name}",${a.type},${a.baseAmount},${a.investedCost},${a.currentValue}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `My_Universal_Backup_${generateTimestampMetadata().rawDateString}.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
+        function handleCSVFileImportSelection(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const rows = text.split('\n');
+                
+                let importedLedger = [];
+                let importedAssets = [];
+                let maximumOdoFound = BASE_INITIAL_ODO;
+
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i].trim();
+                    if (!row) continue;
+                    
+                    const parts = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    if(parts.length < 3) continue;
+
+                    const dataType = parts[0];
+
+                    if(dataType === "LEDGER") {
+                        const odoCheck = parts[6].match(/to ([\d.]+)/);
+                        if(odoCheck && odoCheck[1]) {
+                            const parsedOdo = parseFloat(odoCheck[1]);
+                            if(parsedOdo > maximumOdoFound) maximumOdoFound = parsedOdo;
+                        }
+
+                        importedLedger.push({
+                            id: parts[1],
+                            type: parts[2],
+                            amount: parseFloat(parts[3]),
+                            tag: parts[4],
+                            hours: parseFloat(parts[5]),
+                            description: parts[6].replace(/"/g, ''),
+                            date: parts[7],
+                            timestamp: parseInt(parts[8]),
+                            kilometers: parseFloat(parts[9]) || 0,
+                            parentAssetId: parts[10] ? parts[10].trim() : undefined,
+                            mode: parts[11] ? parts[11].trim() : 'Online'
+                        });
+                    } else if(dataType === "ASSET") {
+                        importedAssets.push({
+                            id: parts[1],
+                            name: parts[2].replace(/"/g, ''),
+                            type: parts[3],
+                            baseAmount: parseFloat(parts[4]),
+                            investedCost: parseFloat(parts[5]),
+                            currentValue: parseFloat(parts[6])
+                        });
+                    }
+                }
+
+                if(importedLedger.length === 0 && importedAssets.length === 0) {
+                    return alert("Error: No compatible data packets detected inside this file.");
+                }
+
+                if(confirm(`Detected ${importedLedger.length} history logs and ${importedAssets.length} investments. Restore backup?`)) {
+                    ledgerDatabase = importedLedger;
+                    portfolioAssets = importedAssets;
+                    localStorage.setItem('apex_odo_last', maximumOdoFound);
+                    
+                    syncPortfolioDatabase();
+                    syncSystemDatabase();
+                    
+                    alert("Database restored successfully!");
+                    toggleModal('settingsModal', false);
+                    switchAppView('viewDashboard', document.querySelectorAll('.nav-item')[0]);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function purgeSystemDataMemory() {
+            if(confirm('Are you sure? This will delete all your data forever.')) {
+                ledgerDatabase = []; portfolioAssets = []; localStorage.removeItem('apex_odo_last'); syncSystemDatabase(); syncPortfolioDatabase(); toggleModal('settingsModal', false); switchAppView('viewDashboard', document.querySelectorAll('.nav-item')[0]);
+            }
+        }
+
+        window.onload = function() { executeCoreFinancialMath(); };
+    </script>
+</body>
+</html>
